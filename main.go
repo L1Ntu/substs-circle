@@ -7,11 +7,15 @@ import (
     "flag"
     "io"
     "io/ioutil"
-    "log"
     "regexp"
     "sort"
     "strings"
+    "os"
+    "fmt"
 )
+
+type SubstsTree map[string][]string
+type SubstsMap map[string]string
 
 var inFile string
 var outFile string
@@ -19,8 +23,8 @@ var partNumberFromColumn int
 var partNumberToColumn int
 
 func init() {
-    flag.StringVar(&inFile, "src", "", "source (input) file name")
-    flag.StringVar(&outFile, "dst", "", "destination (output) file name")
+    flag.StringVar(&inFile, "src", "", "source/input file name")
+    flag.StringVar(&outFile, "dst", "/dev/stdout", "destination/output file name (default /dev/stdout)")
     flag.IntVar(&partNumberFromColumn, "a", 0, "part number A (from) column number")
     flag.IntVar(&partNumberToColumn, "b", 0, "part number B (to) column number")
     flag.Parse()
@@ -50,8 +54,9 @@ func main() {
         partNumberToColumn--
     }
 
-    substitutes := make(map[string][]string, 1024)
-    substitutesCircle := make(map[string]string, 1024)
+    substitutes := make(SubstsTree, 1024)
+    substitutesCircle := make(SubstsMap, 1024)
+    substitutesHistory := make(SubstsMap, 4)
 
     reg, err := regexp.Compile("[^0-9A-Z]+")
     checkError(err)
@@ -84,10 +89,12 @@ func main() {
     }
 
     for key, substs := range substitutes {
-        result := checkCircle(0, key, substs, &substitutes)
+        result := checkCircle(key, substs, &substitutes, &substitutesHistory)
         if result == false {
             substitutesCircle[key] = key
         }
+
+        substitutesHistory = make(SubstsMap, 4)
     }
 
     if len(substitutesCircle) == 0 {
@@ -114,19 +121,22 @@ func main() {
 }
 
 // check circle substitutes
-func checkCircle(idx int, key string, sliceOfSubstitutes []string, substitutes *map[string][]string) bool {
-    if idx > 10 {
-        return true
-    } else {
-        idx++
-    }
-
+func checkCircle(key string, sliceOfSubstitutes []string, substitutes *SubstsTree, checked *SubstsMap) bool {
     for _, el := range sliceOfSubstitutes {
+        if _, exist := (*checked)[el] ; exist {
+            continue
+        } else {
+            (*checked)[el] = el
+        }
+
         if el == key {
             return false
         } else {
+            (*checked)[el] = el
             if value, ok := (*substitutes)[el]; ok {
-                return checkCircle(idx, key, value, substitutes)
+                if checkCircle(key, value, substitutes, checked) == false {
+                    return false
+                }
             }
         }
     }
@@ -137,6 +147,7 @@ func checkCircle(idx int, key string, sliceOfSubstitutes []string, substitutes *
 // check for error
 func checkError(e error) {
     if e != nil {
-        log.Fatal(e)
+        fmt.Printf("error: %s\n", e)
+        os.Exit(1)
     }
 }
