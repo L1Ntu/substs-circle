@@ -120,7 +120,6 @@ func main() {
     checkError(err)
 }
 
-// check circle substitutes
 func checkCircle(key string, sliceOfSubstitutes []string, substitutes *SubstsTree, checked *SubstsMap) bool {
     for _, el := range sliceOfSubstitutes {
         if _, exist := (*checked)[el] ; exist {
@@ -144,7 +143,6 @@ func checkCircle(key string, sliceOfSubstitutes []string, substitutes *SubstsTre
     return true
 }
 
-// check for error
 func checkError(e error) {
     if e != nil {
         fmt.Printf("error: %s\n", e)
